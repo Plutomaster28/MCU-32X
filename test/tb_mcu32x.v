@@ -14,21 +14,27 @@ module tb_mcu32x;
         .mem_write(mem_write)
     );
     
-    // Clock generation
-    always #5 clk = ~clk;
+    // Clock generation (Verilator-friendly)
+    initial clk = 0;
+    always clk = #5 ~clk;
     
     initial begin
         $dumpfile("mcu32x.vcd");
         $dumpvars(0, tb_mcu32x);
         
-        clk = 0; reset = 1;
-        #10 reset = 0;
+        reset = 1;
+        clk = 0;
+        
+        // Reset sequence
+        repeat(2) @(posedge clk);
+        reset = 0;
         
         // Since instructions come from fetch stage internally,
         // we just let the CPU run and observe the outputs
         $display("Starting CPU simulation...");
         
-        #100; // Run for 100 time units
+        // Run for several clock cycles
+        repeat(20) @(posedge clk);
         
         $display("Simulation completed");
         $finish;

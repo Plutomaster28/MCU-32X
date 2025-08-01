@@ -54,7 +54,7 @@ module control_unit (
                 // Decode instruction and set control signals
                 case (instruction[31:26]) // opcode
                     6'b000000: begin // R-type
-                        alu_control = instruction[5:0]; // funct
+                        alu_control = instruction[3:0]; // funct (lower 4 bits)
                         reg_write = 1;
                     end
                     6'b100011: begin // lw

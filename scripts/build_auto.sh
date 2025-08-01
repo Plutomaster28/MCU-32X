@@ -23,7 +23,8 @@ echo "Building with Verilator..."
 
 # Verilator command with auto-discovered files
 verilator --cc --exe --build \
-    -Wno-UNUSED -Wno-UNDRIVEN -Wno-UNOPTFLAT \
+    -Wno-UNUSED -Wno-UNDRIVEN -Wno-UNOPTFLAT -Wno-WIDTHTRUNC \
+    --no-timing \
     --top-module tb_mcu32x \
     -o tb_mcu32x \
     --Mdir $BUILD_DIR/obj_dir \
