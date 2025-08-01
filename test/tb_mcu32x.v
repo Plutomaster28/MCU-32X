@@ -1,14 +1,13 @@
-// Create: test/tb_mcu32x.v
+// Testbench for MCU32X
 module tb_mcu32x;
     reg clk, reset;
-    reg [31:0] instruction;
     wire [31:0] result, address;
     wire mem_read, mem_write;
     
+    // Instantiate the MCU32X (instruction is now internal)
     MCU32X dut(
         .clk(clk),
         .reset(reset),
-        .instruction(instruction),
         .result(result),
         .address(address),
         .mem_read(mem_read),
@@ -25,14 +24,21 @@ module tb_mcu32x;
         clk = 0; reset = 1;
         #10 reset = 0;
         
-        // Test some basic instructions
-        instruction = 32'h20010001; // addi $1, $0, 1
-        #10;
-        instruction = 32'h20020002; // addi $2, $0, 2  
-        #10;
-        instruction = 32'h00221820; // add $3, $1, $2
-        #50;
+        // Since instructions come from fetch stage internally,
+        // we just let the CPU run and observe the outputs
+        $display("Starting CPU simulation...");
         
+        #100; // Run for 100 time units
+        
+        $display("Simulation completed");
         $finish;
+    end
+    
+    // Monitor the CPU outputs
+    always @(posedge clk) begin
+        if (!reset) begin
+            $display("Time: %t | Result: %h | Address: %h | MemRead: %b | MemWrite: %b", 
+                     $time, result, address, mem_read, mem_write);
+        end
     end
 endmodule

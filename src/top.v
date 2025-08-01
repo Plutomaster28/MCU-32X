@@ -1,7 +1,6 @@
 module MCU32X (
     input wire clk,
     input wire reset,
-    input wire [31:0] instruction,
     output wire [31:0] result,
     output wire [31:0] address,
     output wire mem_read,
@@ -10,12 +9,30 @@ module MCU32X (
 
     // Internal signals
     wire [31:0] pc; // Program counter
+    wire [31:0] instruction; // Instruction from fetch stage
     wire [31:0] alu_result; // ALU result
     wire [31:0] read_data; // Data read from memory
     wire [31:0] write_data; // Data to write to memory
     wire [31:0] reg_data; // Data from register file
     wire [31:0] fpu_result; // Result from FPU
     wire [31:0] fetch_address; // Address for fetching instructions
+    
+    // Program counter register
+    reg [31:0] pc_reg;
+    assign pc = pc_reg;
+    
+    // Simple PC increment logic
+    always @(posedge clk or posedge reset) begin
+        if (reset) begin
+            pc_reg <= 32'h00000000;
+        end else begin
+            pc_reg <= pc_reg + 4; // Increment by 4 (word-aligned)
+        end
+    end
+
+    // Assign outputs
+    assign result = alu_result;
+    assign address = alu_result; // Use ALU result as memory address for now
 
     // Instantiate the components
     control_unit cu (
