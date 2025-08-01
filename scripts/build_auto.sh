@@ -25,11 +25,13 @@ echo "Building with Verilator..."
 verilator --cc --exe --build \
     -Wno-UNUSED -Wno-UNDRIVEN -Wno-UNOPTFLAT -Wno-WIDTHTRUNC \
     -Wno-CASEINCOMPLETE -Wno-INFINITELOOP \
-    --no-timing \
+    --timing \
+    --trace \
     --top-module tb_mcu32x \
     -o tb_mcu32x \
     --Mdir $BUILD_DIR/obj_dir \
     $TEST_FILES \
+    $TEST_DIR/tb_mcu32x_main.cpp \
     $VERILOG_FILES
 
 # Check if compilation was successful

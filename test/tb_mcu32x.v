@@ -20,16 +20,13 @@ module tb_mcu32x;
     initial begin
         clk = 0;
         forever begin
-            clk = ~clk;
+            #1 clk = ~clk;
         end
     end
     /* verilator lint_on INFINITELOOP */
     
     // Main test procedure
     initial begin
-        $dumpfile("mcu32x.vcd");
-        $dumpvars(0, tb_mcu32x);
-        
         // Initialize
         reset = 1;
         cycle_count = 0;
@@ -37,34 +34,23 @@ module tb_mcu32x;
         $display("Starting CPU simulation...");
         $display("Reset asserted");
         
-        // Wait a bit then release reset
-        // Note: In Verilator no-timing mode, we can't use delays
-        // The simulation will be driven by the always blocks
+        // Wait a few cycles then release reset
+        #10;
+        reset = 0;
+        $display("Reset released");
         
-        $display("Simulation will run for several cycles");
-        // The simulation will be controlled by the cycle counter
+        // Run simulation for a while
+        #200;
+        
+        $display("Simulation completed after sufficient time");
+        $finish;
     end
     
-    // Cycle counter and reset control
+    // Monitor the CPU outputs (reduced frequency)
     always @(posedge clk) begin
         cycle_count <= cycle_count + 1;
         
-        // Release reset after 2 cycles
-        if (cycle_count == 2) begin
-            reset <= 0;
-            $display("Reset released at cycle %d", cycle_count);
-        end
-        
-        // End simulation after 20 cycles
-        if (cycle_count >= 22) begin
-            $display("Simulation completed after %d cycles", cycle_count);
-            $finish;
-        end
-    end
-    
-    // Monitor the CPU outputs
-    always @(posedge clk) begin
-        if (!reset && cycle_count > 2) begin
+        if (!reset && (cycle_count % 4 == 0)) begin // Print every 4th cycle
             $display("Cycle: %d | Result: %h | Address: %h | MemRead: %b | MemWrite: %b", 
                      cycle_count, result, address, mem_read, mem_write);
         end
