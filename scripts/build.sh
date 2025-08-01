@@ -9,8 +9,13 @@ OUTPUT_DIR="../build"
 # Create the output directory if it doesn't exist
 mkdir -p $OUTPUT_DIR
 
-# Compile the Verilog files
-iverilog -o $OUTPUT_DIR/mcu32x.vvp $SRC_DIR/cpu/*.v $SRC_DIR/cpu/pipeline/*.v $SRC_DIR/cache/*.v $SRC_DIR/bus/*.v $SRC_DIR/memory/*.v $SRC_DIR/dma/*.v $SRC_DIR/interrupt/*.v $SRC_DIR/top.v
+echo "Compiling with Icarus Verilog..."
+
+# Compile the Verilog files (using find to get all .v files)
+VERILOG_FILES=$(find $SRC_DIR -name "*.v" | tr '\n' ' ')
+echo "Found files: $VERILOG_FILES"
+
+iverilog -o $OUTPUT_DIR/mcu32x.vvp $VERILOG_FILES
 
 # Check if the compilation was successful
 if [ $? -eq 0 ]; then
@@ -20,6 +25,7 @@ else
     exit 1
 fi
 
+echo "Running simulation with Icarus Verilog..."
 # Run the simulation
 vvp $OUTPUT_DIR/mcu32x.vvp
 
