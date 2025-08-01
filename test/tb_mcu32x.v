@@ -1,8 +1,9 @@
-// Testbench for MCU32X
+// Testbench for MCU32X - Verilator compatible
 module tb_mcu32x;
     reg clk, reset;
     wire [31:0] result, address;
     wire mem_read, mem_write;
+    reg [7:0] cycle_count;
     
     // Instantiate the MCU32X (instruction is now internal)
     MCU32X dut(
@@ -14,37 +15,56 @@ module tb_mcu32x;
         .mem_write(mem_write)
     );
     
-    // Clock generation (Verilator-friendly)
-    initial clk = 0;
-    always clk = #5 ~clk;
+    // Clock generation for Verilator
+    initial begin
+        clk = 0;
+        forever begin
+            clk = ~clk;
+        end
+    end
     
+    // Main test procedure
     initial begin
         $dumpfile("mcu32x.vcd");
         $dumpvars(0, tb_mcu32x);
         
+        // Initialize
         reset = 1;
-        clk = 0;
+        cycle_count = 0;
         
-        // Reset sequence
-        repeat(2) @(posedge clk);
-        reset = 0;
-        
-        // Since instructions come from fetch stage internally,
-        // we just let the CPU run and observe the outputs
         $display("Starting CPU simulation...");
+        $display("Reset asserted");
         
-        // Run for several clock cycles
-        repeat(20) @(posedge clk);
+        // Wait a bit then release reset
+        // Note: In Verilator no-timing mode, we can't use delays
+        // The simulation will be driven by the always blocks
         
-        $display("Simulation completed");
-        $finish;
+        $display("Simulation will run for several cycles");
+        // The simulation will be controlled by the cycle counter
+    end
+    
+    // Cycle counter and reset control
+    always @(posedge clk) begin
+        cycle_count <= cycle_count + 1;
+        
+        // Release reset after 2 cycles
+        if (cycle_count == 2) begin
+            reset <= 0;
+            $display("Reset released at cycle %d", cycle_count);
+        end
+        
+        // End simulation after 20 cycles
+        if (cycle_count >= 22) begin
+            $display("Simulation completed after %d cycles", cycle_count);
+            $finish;
+        end
     end
     
     // Monitor the CPU outputs
     always @(posedge clk) begin
-        if (!reset) begin
-            $display("Time: %t | Result: %h | Address: %h | MemRead: %b | MemWrite: %b", 
-                     $time, result, address, mem_read, mem_write);
+        if (!reset && cycle_count > 2) begin
+            $display("Cycle: %d | Result: %h | Address: %h | MemRead: %b | MemWrite: %b", 
+                     cycle_count, result, address, mem_read, mem_write);
         end
     end
 endmodule
