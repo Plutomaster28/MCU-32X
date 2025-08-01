@@ -16,12 +16,14 @@ module tb_mcu32x;
     );
     
     // Clock generation for Verilator
+    /* verilator lint_off INFINITELOOP */
     initial begin
         clk = 0;
         forever begin
             clk = ~clk;
         end
     end
+    /* verilator lint_on INFINITELOOP */
     
     // Main test procedure
     initial begin

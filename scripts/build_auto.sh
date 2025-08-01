@@ -24,6 +24,7 @@ echo "Building with Verilator..."
 # Verilator command with auto-discovered files
 verilator --cc --exe --build \
     -Wno-UNUSED -Wno-UNDRIVEN -Wno-UNOPTFLAT -Wno-WIDTHTRUNC \
+    -Wno-CASEINCOMPLETE -Wno-INFINITELOOP \
     --no-timing \
     --top-module tb_mcu32x \
     -o tb_mcu32x \

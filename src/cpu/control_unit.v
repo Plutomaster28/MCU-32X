@@ -70,7 +70,19 @@ module control_unit (
                     6'b000010: begin // j
                         jump = 1;
                     end
+                    default: begin
+                        // Default case for unimplemented opcodes
+                        // All control signals remain at their default values
+                    end
                 endcase
+            end
+            FETCH, EXECUTE, MEMORY, WRITEBACK: begin
+                // Other states - placeholder for future implementation
+                // Control signals remain at their default values
+            end
+            default: begin
+                // Default state case
+                // All control signals remain at their default values
             end
         endcase
     end
