@@ -1,8 +1,8 @@
 module MCU32X (
     input wire clk,
     input wire reset,
-    output wire [31:0] result,
-    output wire [31:0] address,
+    output wire [7:0] result_low,    // Only expose lower 8 bits of result for initial test
+    output wire [7:0] address_low,   // Only expose lower 8 bits of address for initial test
     output wire mem_read,
     output wire mem_write
 );
@@ -31,8 +31,8 @@ module MCU32X (
     end
 
     // Assign outputs
-    assign result = alu_result;
-    assign address = alu_result; // Use ALU result as memory address for now
+    assign result_low = alu_result[7:0];    // Only output lower 8 bits
+    assign address_low = alu_result[7:0];   // Only output lower 8 bits
 
     // Instantiate the components
     control_unit cu (
@@ -55,7 +55,7 @@ module MCU32X (
         .write_data(alu_result),
         .we(1'b0), // Default write disabled
         .read_data1(reg_data),
-        .read_data2() // Leave unconnected for now
+        .read_data2(write_data) // Connect to write_data instead of leaving unconnected
     );
 
     alu alu_inst (
@@ -77,7 +77,7 @@ module MCU32X (
     memory mem (
         .clk(clk),
         .reset(reset),
-        .address(address),
+        .address(alu_result),      // Use full internal address
         .write_data(write_data),
         .read_data(read_data),
         .mem_read(mem_read),
