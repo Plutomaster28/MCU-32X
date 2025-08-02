@@ -8,6 +8,14 @@ module fetch(
 
     // Instruction memory (for simulation purposes)
     reg [31:0] instruction_memory [0:1023]; // 1KB of instruction memory
+    
+    // Initialize instruction memory with NOPs
+    initial begin
+        integer i;
+        for (i = 0; i < 1024; i = i + 1) begin
+            instruction_memory[i] = 32'h00000013; // NOP instruction (addi x0, x0, 0)
+        end
+    end
 
     always @(posedge clk or posedge reset) begin
         if (reset) begin

@@ -13,6 +13,8 @@ module datapath (
     wire [31:0] alu_result;
     wire [31:0] read_data;
     wire [31:0] reg_data1, reg_data2;
+    wire [3:0] alu_control; // ALU control signals
+    wire alu_zero; // ALU zero flag
     wire [4:0] write_reg;
     wire alu_src, reg_write, mem_to_reg, branch, jump;
 
@@ -21,7 +23,7 @@ module datapath (
         .instruction(instruction),
         .clk(clk),
         .reset(reset),
-        .alu_control(), // Leave unconnected for now
+        .alu_control(alu_control),
         .reg_write(reg_write),
         .mem_read(mem_read),
         .mem_write(mem_write),
@@ -45,9 +47,9 @@ module datapath (
     alu alu_unit (
         .A(reg_data1),
         .B(alu_src ? instruction[24:20] : reg_data2),
-        .ALUOp(4'b0000), // Default to ADD operation, should be controlled by control unit
+        .ALUOp(alu_control),
         .Result(alu_result),
-        .Zero() // Leave unconnected for now
+        .Zero(alu_zero)
     );
 
     // Memory access logic

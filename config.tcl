@@ -44,9 +44,16 @@ set ::env(FP_PDN_HWIDTH) 3.1        ;# Horizontal power rail width
 # Pin configuration - let OpenLane auto-assign for now
 # set ::env(FP_PIN_ORDER_CFG) "$::env(DESIGN_DIR)/pin_order.cfg"
 
-# Routing configuration - conservative settings
-set ::env(RT_MAX_LAYER) 6       ;# Use up to metal6 for routing
+# Routing configuration - fix layer issues
+set ::env(RT_MAX_LAYER) "met5"  ;# Use up to metal5 for routing (safer)
+set ::env(RT_MIN_LAYER) "met1"  ;# Minimum routing layer
 set ::env(ROUTING_CORES) 4      ;# Parallel routing
+set ::env(GLB_RT_MINLAYER) 1    ;# Global routing min layer (met1)
+set ::env(GLB_RT_MAXLAYER) 5    ;# Global routing max layer (met5)
+
+# Clock routing constraints
+set ::env(CTS_CLK_MIN_LAYER) 3  ;# Clock minimum layer (met3)
+set ::env(CTS_CLK_MAX_LAYER) 5  ;# Clock maximum layer (met5)
 
 # IO-specific configurations for high pin count designs
 set ::env(FP_IO_MODE) 1         ;# Random IO placement mode
@@ -69,6 +76,9 @@ set ::env(SYNTH_SIZING) 1
 # Placement configuration
 set ::env(PL_RESIZER_DESIGN_OPTIMIZATIONS) 1
 set ::env(PL_RESIZER_TIMING_OPTIMIZATIONS) 1
+
+# Layer configuration - prevent substrate layer usage
+set ::env(GRT_ALLOW_CONGESTION) 1       ;# Allow some congestion to avoid bad layers
 
 # Timing configuration
 set ::env(STA_WRITE_LIB) 1      ;# Write timing libraries

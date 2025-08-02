@@ -17,6 +17,16 @@ module MCU32X (
     wire [31:0] fpu_result; // Result from FPU
     wire [31:0] fetch_address; // Address for fetching instructions
     
+    // Control signals
+    wire [3:0] alu_control; // ALU operation control
+    wire reg_write; // Register write enable
+    wire branch; // Branch signal
+    wire jump; // Jump signal
+    wire alu_zero; // ALU zero flag
+    wire [31:0] pc_out; // Program counter output
+    wire mem_ready; // Memory ready signal
+    wire fpu_valid; // FPU valid signal
+    
     // Program counter register
     reg [31:0] pc_reg;
     assign pc = pc_reg;
@@ -39,12 +49,12 @@ module MCU32X (
         .instruction(instruction),
         .clk(clk),
         .reset(reset),
-        .alu_control(), // Leave unconnected for now
-        .reg_write(),   // Leave unconnected for now
+        .alu_control(alu_control),
+        .reg_write(reg_write),
         .mem_read(mem_read),
         .mem_write(mem_write),
-        .branch(),      // Leave unconnected for now
-        .jump()         // Leave unconnected for now
+        .branch(branch),
+        .jump(jump)
     );
 
     register_file rf (
@@ -61,9 +71,9 @@ module MCU32X (
     alu alu_inst (
         .A(reg_data),
         .B(write_data),
-        .ALUOp(4'b0000), // Default to ADD operation
+        .ALUOp(alu_control),
         .Result(alu_result),
-        .Zero() // Leave unconnected for now
+        .Zero(alu_zero)
     );
 
     fetch fetch_stage (
@@ -71,7 +81,7 @@ module MCU32X (
         .reset(reset),
         .pc_in(pc),
         .instruction_out(instruction),
-        .pc_out() // Leave unconnected for now
+        .pc_out(pc_out)
     );
 
     memory mem (
@@ -82,7 +92,7 @@ module MCU32X (
         .read_data(read_data),
         .mem_read(mem_read),
         .mem_write(mem_write),
-        .mem_ready() // Leave unconnected for now
+        .mem_ready(mem_ready)
     );
 
     // Optional FPU instantiation
@@ -93,7 +103,7 @@ module MCU32X (
         .operand_b(write_data),
         .operation(3'b000), // Default to addition
         .result(fpu_result),
-        .valid() // Leave unconnected for now
+        .valid(fpu_valid)
     );
 
     // Additional logic for connecting components can be added here
