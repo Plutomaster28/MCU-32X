@@ -105,9 +105,95 @@ The integrated design can be tested using:
 - **Wishbone access** - Register readback
 - **GPIO monitoring** - External signal verification
 
+## Troubleshooting
+
+### Common Setup Issues
+
+#### 1. Conda Terms of Service Error
+If you encounter: `CondaToSNonInteractiveError: Terms of Service have not been accepted`
+
+**Solution:**
+```bash
+# Accept conda terms of service
+conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+
+# Or remove the problematic channels
+conda config --remove channels https://repo.anaconda.com/pkgs/main
+conda config --remove channels https://repo.anaconda.com/pkgs/r
+```
+
+#### 2. Missing Volare Error
+If you encounter: `make: /home/user/mcu32x_caravel/venv/bin/volare: No such file or directory`
+
+**Solution:**
+```bash
+# Activate the virtual environment and install volare
+cd ~/mcu32x_caravel
+source venv/bin/activate
+pip install volare
+
+# Or reinstall the virtual environment
+make setup
+```
+
+#### 3. SkyWater PDK Installation Issues
+If PDK installation fails:
+
+**Solution:**
+```bash
+# Clean and retry PDK installation
+make clean_pdk
+make pdk
+
+# Or use alternative PDK source
+export PDK_ROOT=/usr/share/pdk
+make pdk
+```
+
+#### 4. OpenLane Path Issues
+If OpenLane tools are not found:
+
+**Solution:**
+```bash
+# Check OpenLane installation
+which flow.tcl
+
+# Source OpenLane environment
+source $OPENLANE_ROOT/env/bin/activate
+
+# Or reinstall OpenLane
+make openlane
+```
+
+### Quick Fix Commands
+
+For your current situation, try these commands in order:
+
+```bash
+# From ~/mcu32x_caravel directory
+cd ~/mcu32x_caravel
+
+# Fix conda terms of service
+conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+
+# Reinstall virtual environment and dependencies
+make clean
+make setup
+
+# Retry PDK installation
+make pdk
+
+# Try user project wrapper synthesis
+cd openlane
+make user_project_wrapper
+```
+
 ## Notes
 
 - Clock frequency reduced to 40MHz due to Caravel limitations
 - All 32-bit internal buses maintained in MCU-32X
 - Future versions can expand GPIO usage
 - Wishbone interface allows software control from management core
+- Setup issues are common - follow troubleshooting steps above
