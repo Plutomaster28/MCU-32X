@@ -1,0 +1,16 @@
+# Set x1 = 0x48656C6C ("Hell")
+ADD x1, x0, x0         # x1 = 0
+ADD x1, x1, x1         # x1 = 0 (dummy, just to show usage)
+# Manually load immediate (since no LUI/ORI): add lower bytes in steps
+ADD x1, x1, x1         # x1 = 0
+# ... (repeat as needed, or assume x1 is preloaded for this demo)
+
+# Set x2 = 0x100 (memory address)
+ADD x2, x0, x0         # x2 = 0
+# Again, no immediate, so this is a placeholder
+
+# Store x1 to MEM[x2 + 0]
+SW x1, 0, x2           # MEM[0x100] = x1
+
+# Infinite loop to halt
+J 8                    # Jump to self (address 8)
