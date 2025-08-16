@@ -1,0 +1,18 @@
+name: Open MPW Precheck (Placeholder)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '**/*.v'
+      - 'openlane/**'
+      - 'caravel_integration/**'
+      - 'Makefile'
+
+jobs:
+  note:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Placeholder
+        run: |
+          echo "Add containerized precheck invocation here (needs docker + PDK)."
