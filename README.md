@@ -2,37 +2,44 @@
 
 ![MCU-32X Block Diagram](docs/block_diagram.png)
 
+# MCU-32X: 32-bit RISC-V RV32I Processor
+
+![MCU-32X Block Diagram](docs/block_diagram.png)
+
 ## Overview
 
-MCU-32X is a 32-bit RISC-V style processor designed for the SkyWater 130nm process node using 100% open-source EDA tools. This design demonstrates a complete CPU implementation from RTL to GDSII, achieving 200MHz operation in a compact 479µm × 479µm die area.
+MCU-32X is a 32-bit RISC-V RV32I processor designed for demonstration and educational purposes. It implements the complete RISC-V RV32I base instruction set with expanded I/O capabilities, designed to be compatible with 180nm process nodes using open-source EDA tools. This design showcases a full CPU implementation from RTL to GDSII with extensive pin connectivity for demonstration purposes.
 
 ## Features
 
-- **32-bit RISC-V style architecture**
-- **200MHz target clock frequency** (5ns period)
+- **Full RISC-V RV32I architecture** - Complete base instruction set
+- **100MHz target clock frequency** (conservative for 180nm)
 - **Pipelined execution** with 5-stage pipeline (Fetch, Decode, Execute, Memory, Writeback)
-- **Arithmetic Logic Unit (ALU)** with standard operations
-- **Register file** with 32 registers
-- **Floating Point Unit (FPU)** for arithmetic operations
-- **Cache subsystem** (ICache + DCache)
-- **DMA controller** for high-speed data transfers
-- **Interrupt controller** for system management
-- **Memory interfaces** (DDR, Flash, ROM)
-- **Internal and system bus architecture**
+- **Standard RISC-V register file** - 32 registers with x0 hardwired to zero
+- **Expanded I/O interface** - Over 150 pins for demonstration
+- **External memory interfaces** - Separate instruction and data memory
+- **GPIO capabilities** - 32-bit GPIO with direction control
+- **Debug interface** - PC visibility and register inspection
+- **Performance counters** - Cycle and instruction counting
+- **Interrupt support** - External interrupt lines (framework)
+- **Large die area** - 2mm x 2mm for easy visibility and demonstration
 
 ## Specifications
 
 | Parameter | Value |
 |-----------|-------|
-| Architecture | 32-bit RISC-V style |
-| Process Node | SkyWater 130nm |
-| Target Frequency | 200MHz |
-| Die Size | 479.78µm × 478.72µm |
-| Core Area | 480µm × 480µm |
-| Core Utilization | 10% (conservative for first tapeout) |
-| Power Grid Pitch | 50µm (horizontal and vertical) |
+| Architecture | RISC-V RV32I Base ISA |
+| Process Node | 180nm compatible (demo using SkyWater 130nm tools) |
+| Target Frequency | 100MHz (conservative for demonstration) |
+| Die Size | 2mm × 2mm (large for easy demonstration) |
+| Core Area | 1.8mm × 1.8mm |
+| Core Utilization | 5% (very low for easy routing and demos) |
+| Power Grid Pitch | 100µm (horizontal and vertical) |
 | Metal Layers Used | met1 through met5 |
-| I/O Pins | 18 (reduced for initial tapeout) |
+| I/O Pins | 150+ (expanded for demonstration) |
+| Register File | 32 × 32-bit registers (x0-x31) |
+| Memory Interface | 32-bit address, 32-bit data |
+| GPIO Pins | 32-bit bidirectional with direction control |
 
 ## Block Diagram
 
@@ -72,16 +79,59 @@ MCU-32X is a 32-bit RISC-V style processor designed for the SkyWater 130nm proce
 
 ## Pin Configuration
 
+### Core Interface
 | Pin Name | Direction | Width | Description |
 |----------|-----------|-------|-------------|
-| clk | Input | 1 | System clock (200MHz) |
+| clk | Input | 1 | System clock (100MHz) |
 | reset | Input | 1 | Active high reset |
-| result_low[7:0] | Output | 8 | Lower 8 bits of ALU result |
-| address_low[7:0] | Output | 8 | Lower 8 bits of memory address |
-| mem_read | Output | 1 | Memory read enable |
-| mem_write | Output | 1 | Memory write enable |
 
-*Note: Pin count reduced to 18 total for initial tapeout to fit die constraints*
+### Memory Interface
+| Pin Name | Direction | Width | Description |
+|----------|-----------|-------|-------------|
+| mem_addr[31:0] | Output | 32 | Data memory address |
+| mem_wdata[31:0] | Output | 32 | Data memory write data |
+| mem_rdata[31:0] | Input | 32 | Data memory read data |
+| mem_read | Output | 1 | Data memory read enable |
+| mem_write | Output | 1 | Data memory write enable |
+| mem_strb[3:0] | Output | 4 | Data memory byte strobes |
+| mem_ready | Input | 1 | Data memory ready signal |
+
+### Instruction Memory Interface
+| Pin Name | Direction | Width | Description |
+|----------|-----------|-------|-------------|
+| imem_addr[31:0] | Output | 32 | Instruction memory address |
+| imem_rdata[31:0] | Input | 32 | Instruction memory read data |
+| imem_read | Output | 1 | Instruction memory read enable |
+| imem_ready | Input | 1 | Instruction memory ready signal |
+
+### GPIO Interface
+| Pin Name | Direction | Width | Description |
+|----------|-----------|-------|-------------|
+| gpio_out[31:0] | Output | 32 | GPIO output data |
+| gpio_in[31:0] | Input | 32 | GPIO input data |
+| gpio_dir[31:0] | Output | 32 | GPIO direction control (1=output, 0=input) |
+
+### Debug Interface
+| Pin Name | Direction | Width | Description |
+|----------|-----------|-------|-------------|
+| pc_out[31:0] | Output | 32 | Current program counter |
+| reg_debug[31:0] | Output | 32 | Debug register output |
+| reg_debug_addr[4:0] | Output | 5 | Debug register address |
+| cpu_halted | Output | 1 | CPU halt status |
+
+### Interrupt Interface
+| Pin Name | Direction | Width | Description |
+|----------|-----------|-------|-------------|
+| irq_lines[7:0] | Input | 8 | External interrupt lines |
+| irq_ack | Output | 1 | Interrupt acknowledge |
+
+### Performance Monitoring
+| Pin Name | Direction | Width | Description |
+|----------|-----------|-------|-------------|
+| cycle_count[31:0] | Output | 32 | Cycle counter |
+| instr_count[31:0] | Output | 32 | Instruction counter |
+
+**Total I/O Pins: 154** (designed for demonstration and easy interfacing)
 
 ## Getting Started
 
