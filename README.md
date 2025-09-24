@@ -1,10 +1,4 @@
-# MCU-32X: 32-bit RISC-V Style Processor
-
-![MCU-32X Block Diagram](docs/block_diagram.png)
-
 # MCU-32X: 32-bit RISC-V RV32I Processor
-
-![MCU-32X Block Diagram](docs/block_diagram.png)
 
 ## Overview
 
@@ -170,15 +164,15 @@ MCU-32X is a 32-bit RISC-V RV32I processor designed for demonstration and educat
 
 ## Verification Results
 
-### ✅ Design Rule Check (DRC)
+###  Design Rule Check (DRC)
 - **Status:** 1 minor violation (N-well tap)
 - **Impact:** Low risk, acceptable for educational tapeouts
 
-### ✅ Layout vs. Schematic (LVS)
+###  Layout vs. Schematic (LVS)
 - **Status:** PASSED - No mismatches
 - **Total errors:** 0
 
-### ✅ Static Timing Analysis (STA)
+###  Static Timing Analysis (STA)
 - **Status:** PASSED - No violations
 - **Target frequency:** 200MHz achieved
 
@@ -200,7 +194,7 @@ The project is organized into several directories:
 - **docs**: Contains documentation related to the architecture, ISA, and pipeline stages.
 
 ## Getting Started
-To build the project, run the `build.sh` script located in the `scripts` directory. After building, you can run the testbenches using the `run_tests.sh` script.
+Just run `./flow.tcl -design MCU-32X` in OpenLane and give it a few minutes to an hour
 
 ## Documentation
 For detailed information on the architecture, instruction set, and pipeline stages, refer to the documentation files in the `docs` directory.
