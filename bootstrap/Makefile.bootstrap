@@ -1,0 +1,346 @@
+# MCU-32X Complete Bootstrap System Makefile
+# Builds both the bootstrap loader and test application
+
+# Toolchain Configuration
+CROSS_COMPILE = riscv32-unknown-elf-
+AS = $(CROSS_COMPILE)as
+LD = $(CROSS_COMPILE)ld
+OBJCOPY = $(CROSS_COMPILE)objcopy
+OBJDUMP = $(CROSS_COMPILE)objdump
+SIZE = $(CROSS_COMPILE)size
+GCC = $(CROSS_COMPILE)gcc
+
+# Build Configuration
+TARGET_ARCH = rv32i
+ABI = ilp32
+OPTIMIZATION = -Os
+
+# Assembly Flags
+ASFLAGS = -march=$(TARGET_ARCH) -mabi=$(ABI) -32
+CFLAGS = -march=$(TARGET_ARCH) -mabi=$(ABI) $(OPTIMIZATION) -g
+LDFLAGS = --gc-sections -nostdlib -nostartfiles
+
+# Directories
+SRC_DIR = src
+BUILD_DIR = build
+SCRIPTS_DIR = scripts
+
+# Source Files
+BOOTSTRAP_ASM = $(SRC_DIR)/bootstrap.s
+BOOTSTRAP_LD = $(SRC_DIR)/bootstrap.ld
+TEST_APP_ASM = $(SRC_DIR)/test_app.s
+TEST_APP_LD = $(SRC_DIR)/test_app.ld
+HARDWARE_H = $(SRC_DIR)/mcu32x_hardware.h
+
+# Output Files
+BOOTSTRAP_ELF = $(BUILD_DIR)/bootstrap.elf
+BOOTSTRAP_BIN = $(BUILD_DIR)/bootstrap.bin
+BOOTSTRAP_HEX = $(BUILD_DIR)/bootstrap.hex
+BOOTSTRAP_MAP = $(BUILD_DIR)/bootstrap.map
+BOOTSTRAP_LST = $(BUILD_DIR)/bootstrap.lst
+
+TEST_APP_ELF = $(BUILD_DIR)/test_app.elf
+TEST_APP_BIN = $(BUILD_DIR)/test_app.bin
+TEST_APP_HEX = $(BUILD_DIR)/test_app.hex
+TEST_APP_MAP = $(BUILD_DIR)/test_app.map
+TEST_APP_LST = $(BUILD_DIR)/test_app.lst
+
+# Combined system image
+SYSTEM_IMG = $(BUILD_DIR)/mcu32x_system.img
+SYSTEM_HEX = $(BUILD_DIR)/mcu32x_system.hex
+
+# Colors for terminal output
+RED = \033[0;31m
+GREEN = \033[0;32m
+YELLOW = \033[1;33m
+BLUE = \033[0;34m
+CYAN = \033[0;36m
+NC = \033[0m # No Color
+
+.PHONY: all clean bootstrap test_app system help info check_tools
+
+# Default target
+all: check_tools bootstrap test_app system
+	@echo -e "$(GREEN)MCU-32X Bootstrap System build complete!$(NC)"
+	@$(MAKE) info
+
+# Check if required tools are available
+check_tools:
+	@echo -e "$(BLUE)Checking RISC-V toolchain...$(NC)"
+	@which $(AS) > /dev/null || (echo -e "$(RED)Error: $(AS) not found$(NC)" && exit 1)
+	@which $(LD) > /dev/null || (echo -e "$(RED)Error: $(LD) not found$(NC)" && exit 1)
+	@which $(OBJCOPY) > /dev/null || (echo -e "$(RED)Error: $(OBJCOPY) not found$(NC)" && exit 1)
+	@echo -e "$(GREEN)Toolchain check passed$(NC)"
+
+# Create build directory
+$(BUILD_DIR):
+	@mkdir -p $(BUILD_DIR)
+
+# Build bootstrap loader
+bootstrap: $(BUILD_DIR) $(BOOTSTRAP_ELF) $(BOOTSTRAP_BIN) $(BOOTSTRAP_HEX) $(BOOTSTRAP_LST)
+	@echo -e "$(GREEN)Bootstrap loader build complete$(NC)"
+
+$(BOOTSTRAP_ELF): $(BOOTSTRAP_ASM) $(BOOTSTRAP_LD) $(HARDWARE_H)
+	@echo -e "$(YELLOW)Building bootstrap loader...$(NC)"
+	$(AS) $(ASFLAGS) -I$(SRC_DIR) -o $(BUILD_DIR)/bootstrap.o $(BOOTSTRAP_ASM)
+	$(LD) $(LDFLAGS) -T $(BOOTSTRAP_LD) -Map=$(BOOTSTRAP_MAP) \
+		-o $(BOOTSTRAP_ELF) $(BUILD_DIR)/bootstrap.o
+
+$(BOOTSTRAP_BIN): $(BOOTSTRAP_ELF)
+	$(OBJCOPY) -O binary $(BOOTSTRAP_ELF) $(BOOTSTRAP_BIN)
+
+$(BOOTSTRAP_HEX): $(BOOTSTRAP_ELF)
+	$(OBJCOPY) -O ihex $(BOOTSTRAP_ELF) $(BOOTSTRAP_HEX)
+
+$(BOOTSTRAP_LST): $(BOOTSTRAP_ELF)
+	$(OBJDUMP) -d -S $(BOOTSTRAP_ELF) > $(BOOTSTRAP_LST)
+
+# Build test application
+test_app: $(BUILD_DIR) $(TEST_APP_ELF) $(TEST_APP_BIN) $(TEST_APP_HEX) $(TEST_APP_LST)
+	@echo -e "$(GREEN)Test application build complete$(NC)"
+
+# Create test application linker script
+$(SRC_DIR)/test_app.ld:
+	@echo -e "$(YELLOW)Generating test application linker script...$(NC)"
+	@cat > $(SRC_DIR)/test_app.ld << 'EOF'
+OUTPUT_ARCH(riscv)
+ENTRY(_app_start)
+
+MEMORY
+{
+    FLASH (rx)  : ORIGIN = 0x00010000, LENGTH = 448K
+    RAM (rwx)   : ORIGIN = 0x20000000, LENGTH = 64K
+    DRAM (rwx)  : ORIGIN = 0x40000000, LENGTH = 16M
+}
+
+SECTIONS
+{
+    .app_header 0x00010000 : ALIGN(256)
+    {
+        KEEP(*(.app_header))
+    } > FLASH
+
+    .text : ALIGN(4)
+    {
+        *(.text)
+        *(.text.*)
+        *(.rodata)
+        *(.rodata.*)
+    } > FLASH
+
+    .data : ALIGN(4)
+    {
+        _data_start = .;
+        *(.data)
+        *(.data.*)
+        _data_end = .;
+    } > RAM AT > FLASH
+
+    .bss : ALIGN(4)
+    {
+        _bss_start = .;
+        *(.bss)
+        *(.bss.*)
+        *(COMMON)
+        _bss_end = .;
+    } > RAM
+
+    _app_size = SIZEOF(.app_header) + SIZEOF(.text) + SIZEOF(.data);
+}
+EOF
+
+$(TEST_APP_ELF): $(TEST_APP_ASM) $(SRC_DIR)/test_app.ld $(HARDWARE_H)
+	@echo -e "$(YELLOW)Building test application...$(NC)"
+	$(AS) $(ASFLAGS) -I$(SRC_DIR) -o $(BUILD_DIR)/test_app.o $(TEST_APP_ASM)
+	$(LD) $(LDFLAGS) -T $(SRC_DIR)/test_app.ld -Map=$(TEST_APP_MAP) \
+		-o $(TEST_APP_ELF) $(BUILD_DIR)/test_app.o
+
+$(TEST_APP_BIN): $(TEST_APP_ELF)
+	$(OBJCOPY) -O binary $(TEST_APP_ELF) $(TEST_APP_BIN)
+
+$(TEST_APP_HEX): $(TEST_APP_ELF)
+	$(OBJCOPY) -O ihex $(TEST_APP_ELF) $(TEST_APP_HEX)
+
+$(TEST_APP_LST): $(TEST_APP_ELF)
+	$(OBJDUMP) -d -S $(TEST_APP_ELF) > $(TEST_APP_LST)
+
+# Create combined system image
+system: bootstrap test_app $(SYSTEM_IMG) $(SYSTEM_HEX)
+	@echo -e "$(GREEN)System image created$(NC)"
+
+$(SYSTEM_IMG): $(BOOTSTRAP_BIN) $(TEST_APP_BIN)
+	@echo -e "$(YELLOW)Creating combined system image...$(NC)"
+	# Create 512KB image filled with 0xFF (erased flash state)
+	dd if=/dev/zero bs=512K count=1 | tr '\0' '\377' > $(SYSTEM_IMG)
+	# Place bootstrap at offset 0
+	dd if=$(BOOTSTRAP_BIN) of=$(SYSTEM_IMG) conv=notrunc bs=1
+	# Place test application at offset 64KB
+	dd if=$(TEST_APP_BIN) of=$(SYSTEM_IMG) conv=notrunc bs=1 seek=65536
+
+$(SYSTEM_HEX): $(SYSTEM_IMG)
+	# Convert system image to Intel HEX format
+	$(OBJCOPY) -I binary -O ihex --change-addresses=0x00000000 $(SYSTEM_IMG) $(SYSTEM_HEX)
+
+# Display build information
+info:
+	@echo -e "$(CYAN)==================================================$(NC)"
+	@echo -e "$(CYAN)           MCU-32X Bootstrap Build Info          $(NC)"
+	@echo -e "$(CYAN)==================================================$(NC)"
+	@echo -e "$(YELLOW)Bootstrap Loader:$(NC)"
+	@if [ -f $(BOOTSTRAP_ELF) ]; then \
+		$(SIZE) $(BOOTSTRAP_ELF); \
+		echo -e "$(YELLOW)Memory Usage:$(NC)"; \
+		$(SIZE) -A $(BOOTSTRAP_ELF) | grep -E "\.text|\.data|\.bss|\.vectors|\.rodata" | \
+		awk '{printf "  %-12s %8s bytes\n", $$1, $$2}'; \
+	fi
+	@echo ""
+	@echo -e "$(YELLOW)Test Application:$(NC)"
+	@if [ -f $(TEST_APP_ELF) ]; then \
+		$(SIZE) $(TEST_APP_ELF); \
+		echo -e "$(YELLOW)Memory Usage:$(NC)"; \
+		$(SIZE) -A $(TEST_APP_ELF) | grep -E "\.text|\.data|\.bss|\.app_header" | \
+		awk '{printf "  %-12s %8s bytes\n", $$1, $$2}'; \
+	fi
+	@echo ""
+	@echo -e "$(YELLOW)Output Files:$(NC)"
+	@ls -la $(BUILD_DIR)/*.elf $(BUILD_DIR)/*.bin $(BUILD_DIR)/*.hex 2>/dev/null || true
+	@echo ""
+	@echo -e "$(YELLOW)Memory Map:$(NC)"
+	@echo "  0x00000000 - 0x0000FFFF : Bootstrap Loader (64KB)"
+	@echo "  0x00010000 - 0x0007FFFF : Application Area (448KB)"
+	@echo "  0x20000000 - 0x2000FFFF : Internal SRAM (64KB)"
+	@echo "  0x40000000 - 0x40FFFFFF : External DRAM (16MB)"
+
+# Programming targets (for real hardware)
+program_bootstrap: $(BOOTSTRAP_HEX)
+	@echo -e "$(YELLOW)Programming bootstrap loader...$(NC)"
+	@echo "Connect JTAG/SWD programmer and run:"
+	@echo "  openocd -f mcu32x_openocd.cfg -c \"program $(BOOTSTRAP_HEX) verify reset exit\""
+
+program_system: $(SYSTEM_HEX)
+	@echo -e "$(YELLOW)Programming complete system...$(NC)"
+	@echo "Connect JTAG/SWD programmer and run:"
+	@echo "  openocd -f mcu32x_openocd.cfg -c \"program $(SYSTEM_HEX) verify reset exit\""
+
+# Simulation targets
+simulate: $(BOOTSTRAP_ELF)
+	@echo -e "$(YELLOW)Starting MCU-32X simulation...$(NC)"
+	@if [ -f ../build/mcu32x.vvp ]; then \
+		vvp ../build/mcu32x.vvp; \
+	else \
+		echo -e "$(RED)Simulation not found. Run 'make' in project root first.$(NC)"; \
+	fi
+
+# Debug targets
+debug_bootstrap: $(BOOTSTRAP_ELF)
+	@echo -e "$(YELLOW)Starting GDB session for bootstrap...$(NC)"
+	$(CROSS_COMPILE)gdb $(BOOTSTRAP_ELF)
+
+debug_test_app: $(TEST_APP_ELF)
+	@echo -e "$(YELLOW)Starting GDB session for test application...$(NC)"
+	$(CROSS_COMPILE)gdb $(TEST_APP_ELF)
+
+# Analysis targets
+analyze: $(BOOTSTRAP_LST) $(TEST_APP_LST)
+	@echo -e "$(YELLOW)Code Analysis:$(NC)"
+	@echo "Bootstrap disassembly: $(BOOTSTRAP_LST)"
+	@echo "Test app disassembly: $(TEST_APP_LST)"
+	@echo "Memory maps: $(BOOTSTRAP_MAP) $(TEST_APP_MAP)"
+
+# Verification targets
+verify: bootstrap test_app
+	@echo -e "$(YELLOW)Verifying bootstrap loader...$(NC)"
+	@# Check vector table alignment
+	@VECTOR_ADDR=$$($(OBJDUMP) -t $(BOOTSTRAP_ELF) | grep "_vectors" | awk '{print $$1}'); \
+	if [ -n "$$VECTOR_ADDR" ]; then \
+		DECIMAL=$$(printf "%d" 0x$$VECTOR_ADDR); \
+		ALIGN=$$(($$DECIMAL % 256)); \
+		if [ $$ALIGN -eq 0 ]; then \
+			echo -e "$(GREEN)✓ Vector table properly aligned (0x$$VECTOR_ADDR)$(NC)"; \
+		else \
+			echo -e "$(RED)✗ Vector table misaligned (0x$$VECTOR_ADDR)$(NC)"; \
+		fi; \
+	fi
+	@# Check bootstrap size
+	@BOOTSTRAP_SIZE=$$(stat -c%s $(BOOTSTRAP_BIN)); \
+	if [ $$BOOTSTRAP_SIZE -le 65536 ]; then \
+		echo -e "$(GREEN)✓ Bootstrap size OK ($$BOOTSTRAP_SIZE bytes)$(NC)"; \
+	else \
+		echo -e "$(RED)✗ Bootstrap too large ($$BOOTSTRAP_SIZE bytes > 64KB)$(NC)"; \
+	fi
+	@# Check test app signature
+	@if [ -f $(TEST_APP_BIN) ]; then \
+		SIG=$$(hexdump -n 4 -e '4/1 "%02x"' $(TEST_APP_BIN)); \
+		if [ "$$SIG" = "434d5832" ]; then \
+			echo -e "$(GREEN)✓ Test app signature valid$(NC)"; \
+		else \
+			echo -e "$(YELLOW)! Test app signature: 0x$$SIG (expected 0x434d5832)$(NC)"; \
+		fi; \
+	fi
+
+# Clean build artifacts
+clean:
+	@echo -e "$(YELLOW)Cleaning build artifacts...$(NC)"
+	rm -rf $(BUILD_DIR)
+	rm -f $(SRC_DIR)/test_app.ld
+	@echo -e "$(GREEN)Clean complete$(NC)"
+
+# Help target
+help:
+	@echo -e "$(CYAN)MCU-32X Bootstrap Build System$(NC)"
+	@echo ""
+	@echo -e "$(YELLOW)Available targets:$(NC)"
+	@echo "  all          - Build complete system (bootstrap + test app)"
+	@echo "  bootstrap    - Build bootstrap loader only"  
+	@echo "  test_app     - Build test application only"
+	@echo "  system       - Create combined system image"
+	@echo "  clean        - Remove all build artifacts"
+	@echo "  info         - Display build information"
+	@echo "  verify       - Verify build outputs"
+	@echo "  analyze      - Generate analysis reports"
+	@echo "  simulate     - Run in MCU-32X simulator"
+	@echo "  help         - Show this help message"
+	@echo ""
+	@echo -e "$(YELLOW)Programming targets:$(NC)"
+	@echo "  program_bootstrap - Program bootstrap loader via JTAG"
+	@echo "  program_system    - Program complete system via JTAG"
+	@echo ""
+	@echo -e "$(YELLOW)Debug targets:$(NC)"
+	@echo "  debug_bootstrap   - Debug bootstrap with GDB"
+	@echo "  debug_test_app    - Debug test application with GDB"
+
+# Create OpenOCD configuration for programming
+openocd_config:
+	@echo -e "$(YELLOW)Creating OpenOCD configuration...$(NC)"
+	@cat > mcu32x_openocd.cfg << 'EOF'
+# MCU-32X OpenOCD Configuration
+source [find interface/ftdi/olimex-arm-usb-ocd-h.cfg]
+source [find target/riscv-mcu32x.cfg]
+
+# MCU-32X specific target configuration
+set _TARGETNAME mcu32x
+set _CHIPNAME mcu32x
+
+# RISC-V target
+target create $_TARGETNAME.cpu riscv -chain-position $_TARGETNAME.tap
+
+# Flash configuration
+flash bank mcu32x_flash cfi 0x00000000 0x80000 2 2 $_TARGETNAME.cpu
+
+# Reset configuration  
+reset_config srst_only
+
+# Initialization
+init
+reset halt
+EOF
+	@echo -e "$(GREEN)OpenOCD configuration created: mcu32x_openocd.cfg$(NC)"
+
+# Quick test build (faster for development)
+quick: check_tools $(BUILD_DIR)
+	@echo -e "$(YELLOW)Quick build (bootstrap only)...$(NC)"
+	$(AS) $(ASFLAGS) -I$(SRC_DIR) -o $(BUILD_DIR)/bootstrap.o $(BOOTSTRAP_ASM)
+	$(LD) $(LDFLAGS) -T $(BOOTSTRAP_LD) -o $(BOOTSTRAP_ELF) $(BUILD_DIR)/bootstrap.o
+	$(OBJCOPY) -O binary $(BOOTSTRAP_ELF) $(BOOTSTRAP_BIN)
+	@echo -e "$(GREEN)Quick build complete$(NC)"
+	@$(SIZE) $(BOOTSTRAP_ELF)
